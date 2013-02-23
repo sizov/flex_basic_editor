@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <s:Application
-		xmlns:fx="http://ns.adobe.com/mxml/2009"
-		xmlns:s="library://ns.adobe.com/flex/spark"
-		xmlns:view="com.sizov.basicEditor.view.*"
-		xmlns:spicefactory="http://www.spicefactory.org/parsley"
-		minWidth="955"
-		minHeight="600">
+    xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:view="com.sizov.basicEditor.view.*"
+    xmlns:spicefactory="http://www.spicefactory.org/parsley"
+    minWidth="955"
+    minHeight="600">
 
-	<fx:Script>
+    <fx:Script>
 		<![CDATA[
-		import com.sizov.basicEditor.context.BasicEditorContext;
-		]]>
+        import com.sizov.basicEditor.context.BasicEditorContext;
+        ]]>
 	</fx:Script>
 
-	<fx:Declarations>
-		<spicefactory:ContextBuilder
-				config="{BasicEditorContext}"/>
-	</fx:Declarations>
+    <fx:Declarations>
+        <spicefactory:ContextBuilder
+            config="{BasicEditorContext}"/>
+    </fx:Declarations>
 
-	<s:layout>
-		<s:VerticalLayout
-				horizontalAlign="center"
-				verticalAlign="middle"/>
-	</s:layout>
+    <s:layout>
+        <s:VerticalLayout
+            horizontalAlign="center"
+            verticalAlign="middle"/>
+    </s:layout>
 
 
-	<view:MainView
-			width="800"
-			height="600"/>
+    <view:MainView
+        width="800"
+        height="600"/>
 
 </s:Application>
