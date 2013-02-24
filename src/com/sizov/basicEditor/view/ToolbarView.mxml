@@ -2,57 +2,53 @@
 <s:Group
     xmlns:fx="http://ns.adobe.com/mxml/2009"
     xmlns:s="library://ns.adobe.com/flex/spark"
-    xmlns:spicefactory="http://www.spicefactory.org/parsley">
+    xmlns:spicefactory="http://www.spicefactory.org/parsley"
+    xmlns:mx="library://ns.adobe.com/flex/mx">
 
     <fx:Script>
 		<![CDATA[
-        import com.sizov.basicEditor.model.ToolbarModel;
+        import com.sizov.basicEditor.model.ToolbarViewModel;
         import com.sizov.basicEditor.utils.ToolbarButtonData;
 
         [Bindable]
         /**
          * Presentation Model that controls current view.
          */
-        public var model:ToolbarModel;
+        public var model:ToolbarViewModel;
         ]]>
 	</fx:Script>
 
     <fx:Declarations>
         <spicefactory:FastInject
             property="model"
-            type="{ToolbarModel}"/>
+            type="{ToolbarViewModel}"
+            injectionComplete="model.setDefaultCanvasMode()"/>
     </fx:Declarations>
 
     <s:layout>
         <s:VerticalLayout horizontalAlign="center"/>
     </s:layout>
 
+    <s:Label text="Mode:"/>
+
     <s:ButtonBar
         id="toolBarButtonDataBar"
         requireSelection="true"
         dataProvider="{ToolbarButtonData.DEFAULT_BUTTON_SET}"
-        selectedItem="{ToolbarButtonData.getButtonDataByCanvasMode(model.canvasMode)}"
-        change="model.canvasMode = ToolbarButtonData.getCanvasModeByButtonData(toolBarButtonDataBar)">
+        change="model.changeCanvasMode(ToolbarButtonData.getCanvasModeByButtonData(toolBarButtonDataBar.selectedItem))">
         <s:layout>
             <s:VerticalLayout/>
         </s:layout>
     </s:ButtonBar>
 
-    <!--<s:Button-->
-    <!--label="Add Skinnable rectangle"-->
-    <!--click="model.addSkinnableRectangle()"/>-->
-    <!--<s:Button-->
-    <!--label="Text"-->
-    <!--click="model.textMode()"/>-->
-    <!--<s:Button-->
-    <!--label="Move/Resize"-->
-    <!--click="model.moveResizeMode()"/>-->
-    <!--<s:Button-->
-    <!--label="Delete"-->
-    <!--click="model.deleteMode()"/>
+    <mx:Spacer height="20"/>
+
+    <s:Label text="Actions:"/>
+
     <s:Button
-    label="Clear canvas"
-    click="model.clearCanvasHandler()"/>-->
+        label="Clear"
+        click="model.clear()"/>
+
     <s:Button
         label="Save"
         click="model.save()"/>

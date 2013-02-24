@@ -7,31 +7,28 @@
 
     <fx:Script>
 		<![CDATA[
-        import com.sizov.basicEditor.model.CanvasModel;
+        import com.sizov.basicEditor.model.CanvasViewModel;
 
         [Bindable]
         /**
          * Presentation Model that controls current view.
          */
-        public var model:CanvasModel;
+        public var model:CanvasViewModel;
         ]]>
 	</fx:Script>
 
     <fx:Declarations>
         <spicefactory:FastInject
             property="model"
-            type="{CanvasModel}"/>
+            type="{CanvasViewModel}"
+            injectionComplete="model.loadShapes()"/>
     </fx:Declarations>
-
-    <s:layout>
-        <s:VerticalLayout horizontalAlign="center"/>
-    </s:layout>
 
     <components:ShapesCanvas
         id="shapesCanvas"
         mode="{model.canvasMode}"
-        dataProvider="{model.shapesDataProvider}"
-        backgroundColor="0xdddddd"
+        shapeFactory="{model.shapesFactory}"
+        dataProvider="{model.shapesCollection}"
         width="100%"
         height="100%"/>
 

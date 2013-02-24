@@ -3,20 +3,20 @@
     xmlns:fx="http://ns.adobe.com/mxml/2009"
     xmlns:s="library://ns.adobe.com/flex/spark"
     xmlns:assets="com.sizov.basicEditor.assets.*"
-    alpha.disabled=".5"
-    minWidth="30"
-    minHeight="30">
+    alpha.disabled=".5">
 
-    <!-- states -->
+    <fx:Metadata>
+        <![CDATA[
+        [HostComponent("com.sizov.basicEditor.components.skinnableShape.RectangleSkinnableShape")]
+        ]]>
+    </fx:Metadata>
+
     <s:states>
         <s:State name="up"/>
-        <!--        <s:State name="over"/>
-                <s:State name="down"/>-->
         <s:State name="disabled"/>
         <s:State name="selected"/>
     </s:states>
 
-    <!-- border and fill -->
     <s:Rect
         id="rect"
         top="0"
@@ -28,8 +28,21 @@
         </s:fill>
     </s:Rect>
 
+    <s:Rect
+        id="rectBorder"
+        top="0"
+        right="0"
+        bottom="0"
+        left="0"
+        includeIn="selected">
+        <s:stroke>
+            <s:SolidColorStroke color="#444444"/>
+        </s:stroke>
+    </s:Rect>
+
     <assets:Handler
         id="bottomRightHandler"
+        includeIn="selected"
         bottom="0"
         right="0"/>
 

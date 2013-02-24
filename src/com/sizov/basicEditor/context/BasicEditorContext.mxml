@@ -1,14 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Object
+<fx:Object
     xmlns:fx="http://ns.adobe.com/mxml/2009"
-    xmlns="http://www.spicefactory.org/parsley"
-    xmlns:model="com.sizov.basicEditor.model.*"
-    xmlns:services="com.sizov.basicEditor.services.*">
+    xmlns:parsley="http://www.spicefactory.org/parsley">
+
+    <fx:Script><![CDATA[
+        import com.sizov.basicEditor.commands.LoadShapesCommand;
+        import com.sizov.basicEditor.commands.SaveShapesCommand;
+        import com.sizov.basicEditor.components.ShapeFactory;
+        import com.sizov.basicEditor.messages.ServiceMessage;
+        import com.sizov.basicEditor.model.CanvasViewModel;
+        import com.sizov.basicEditor.model.ToolbarViewModel;
+        import com.sizov.basicEditor.services.SharedObjectsShapesService;
+        ]]></fx:Script>
 
     <fx:Declarations>
-        <model:MainModel/>
-        <model:ToolbarModel/>
-        <model:CanvasModel/>
+
+        <parsley:Object type="{ToolbarViewModel}"/>
+        <parsley:Object type="{CanvasViewModel}"/>
+
+        <parsley:DynamicObject type="{SharedObjectsShapesService}"/>
+
+        <parsley:DynamicObject type="{ShapeFactory}"/>
+
+        <parsley:DynamicCommand
+            type="{LoadShapesCommand}"
+            messageType="{ServiceMessage}"
+            selector="{ServiceMessage.LOAD_SHAPES}"/>
+
+        <parsley:DynamicCommand
+            type="{SaveShapesCommand}"
+            messageType="{ServiceMessage}"
+            selector="{ServiceMessage.SAVE_SHAPES}"/>
+
     </fx:Declarations>
 
-</Object>
+</fx:Object>

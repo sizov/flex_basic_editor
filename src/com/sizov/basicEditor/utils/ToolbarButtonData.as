@@ -14,24 +14,24 @@ package com.sizov.basicEditor.utils {
             DELETE_BUTTON_DATA
         ]);
 
-        public static function getButtonDataByCanvasMode(canvasMode:String):Object {
-            switch (canvasMode) {
-                case ShapesCanvasModes.CREATE_AND_EDIT:
-                    return ToolbarButtonData.CREATE_AND_EDIT_BUTTON_DATA;
-                    break;
-                case ShapesCanvasModes.RESIZE_AND_MOVE:
-                    return ToolbarButtonData.RESIZE_AND_MOVE_BUTTON_DATA;
-                    break;
-                case ShapesCanvasModes.DELETE:
-                    return ToolbarButtonData.DELETE_BUTTON_DATA;
-                    break;
-                default:
-                    return null;
-            }
-        }
+//        public static function getButtonDataByCanvasMode(canvasMode:String):Object {
+//            switch (canvasMode) {
+//                case ShapesCanvasModes.CREATE_AND_EDIT:
+//                    return ToolbarButtonData.CREATE_AND_EDIT_BUTTON_DATA;
+//                    break;
+//                case ShapesCanvasModes.RESIZE_AND_MOVE:
+//                    return ToolbarButtonData.RESIZE_AND_MOVE_BUTTON_DATA;
+//                    break;
+//                case ShapesCanvasModes.DELETE:
+//                    return ToolbarButtonData.DELETE_BUTTON_DATA;
+//                    break;
+//                default:
+//                    return null;
+//            }
+//        }
 
-        public static function getCanvasModeByButtonData(buttonDataBar:Object):String {
-            switch (buttonDataBar) {
+        public static function getCanvasModeByButtonData(buttonBarData:Object):String {
+            switch (buttonBarData) {
                 case ToolbarButtonData.CREATE_AND_EDIT_BUTTON_DATA:
                     return ShapesCanvasModes.CREATE_AND_EDIT;
                     break;

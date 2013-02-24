@@ -3,15 +3,17 @@
     xmlns:fx="http://ns.adobe.com/mxml/2009"
     xmlns:s="library://ns.adobe.com/flex/spark"
     xmlns:assets="com.sizov.basicEditor.assets.*"
-    alpha.disabled=".5"
-    minWidth="60"
-    minHeight="60">
+    alpha.disabled=".5">
+
+    <fx:Metadata>
+        <![CDATA[
+        [HostComponent("com.sizov.basicEditor.components.skinnableShape.TextSkinnableShape")]
+        ]]>
+    </fx:Metadata>
 
     <!-- states -->
     <s:states>
         <s:State name="up"/>
-        <!--        <s:State name="over"/>
-                <s:State name="down"/>-->
         <s:State name="disabled"/>
         <s:State name="selected"/>
     </s:states>
@@ -28,14 +30,19 @@
         </s:fill>
     </s:Rect>
 
-    <s:Label text="Vladimir Sizov"
-             includeIn="up"/>
+    <s:Label
+        text="{hostComponent.text}"
+        includeIn="up"/>
 
-    <s:TextInput text="Vladimir Sizov"
-                 includeIn="selected"/>
+    <s:TextInput
+        id="textInput"
+        text="{hostComponent.text}"
+        change="hostComponent.text = textInput.text"
+        includeIn="selected"/>
 
     <assets:Handler
         id="bottomRightHandler"
+        includeIn="selected"
         bottom="0"
         right="0"/>
 

@@ -1,10 +1,3 @@
-/**
- * Created with IntelliJ IDEA.
- * User: vsyzov
- * Date: 23.02.13
- * Time: 21:06
- * To change this template use File | Settings | File Templates.
- */
 package com.sizov.basicEditor.utils {
 
     public class ShapesCanvasModes {

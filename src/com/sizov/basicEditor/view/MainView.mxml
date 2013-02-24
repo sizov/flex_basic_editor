@@ -2,27 +2,7 @@
 <s:Group
     xmlns:fx="http://ns.adobe.com/mxml/2009"
     xmlns:s="library://ns.adobe.com/flex/spark"
-    xmlns:spicefactory="http://www.spicefactory.org/parsley"
     xmlns:view="com.sizov.basicEditor.view.*">
-
-    <fx:Script>
-		<![CDATA[
-        import com.sizov.basicEditor.model.MainModel;
-
-        [Bindable]
-        /**
-         * Presentation Model that controls current view.
-         */
-        public var model:MainModel;
-        ]]>
-	</fx:Script>
-
-    <fx:Declarations>
-        <spicefactory:FastInject
-            property="model"
-            type="{MainModel}"
-            injectionComplete="model.setDefaultCanvasMode()"/>
-    </fx:Declarations>
 
     <s:layout>
         <s:VerticalLayout
@@ -30,20 +10,11 @@
             verticalAlign="middle"/>
     </s:layout>
 
-    <s:Label
-        text="Basic Editor"
-        fontSize="24"
-        fontWeight="bold"/>
-
-    <s:HGroup
-        width="100%"
-        height="100%">
-        <view:ToolbarView
-            width="20%"
-            height="100%"/>
+    <s:HGroup>
+        <view:ToolbarView/>
         <view:CanvasView
-            width="80%"
-            height="100%"/>
+            width="800"
+            height="600"/>
     </s:HGroup>
 
 </s:Group>

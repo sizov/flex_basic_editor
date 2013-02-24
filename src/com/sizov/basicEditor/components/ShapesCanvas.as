@@ -1,24 +1,28 @@
 package com.sizov.basicEditor.components {
 
     import com.sizov.basicEditor.components.skinnableShape.SkinnableShape;
-    import com.sizov.basicEditor.components.skinnableShape.TexteSkinnableShape;
-    import com.sizov.basicEditor.utils.ShapesCanvasModes;
+    import com.sizov.basicEditor.events.SkinnableShapeEvent;
     import com.sizov.basicEditor.skins.ShapesCanvasSkin;
+    import com.sizov.basicEditor.utils.ShapesCanvasModes;
 
     import flash.events.Event;
+    import flash.events.FocusEvent;
+    import flash.events.KeyboardEvent;
     import flash.events.MouseEvent;
+    import flash.geom.Point;
 
-    import mx.collections.IList;
-    import mx.core.IUIComponent;
+    import mx.collections.ArrayCollection;
     import mx.core.IVisualElement;
     import mx.events.CollectionEvent;
     import mx.events.CollectionEventKind;
-    import mx.events.DragEvent;
-    import mx.managers.DragManager;
+    import mx.managers.IFocusManagerComponent;
 
     import spark.components.SkinnableContainer;
 
-    public class ShapesCanvas extends SkinnableContainer {
+    public class ShapesCanvas extends SkinnableContainer implements IFocusManagerComponent {
+
+        public var shapeFactory:IShapeFactory;
+        public var mode:String;
 
         public function ShapesCanvas() {
             super();
@@ -26,92 +30,176 @@ package com.sizov.basicEditor.components {
             setStyle("skinClass", ShapesCanvasSkin);
 
             addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
-
-            addEventListener(DragEvent.DRAG_ENTER, dragEnterHandler, false, 0, true);
-            addEventListener(DragEvent.DRAG_DROP, dragDropHandler, false, 0, true);
+            addEventListener(SkinnableShapeEvent.SELECTION_CHANGE, shapeSelectionChangeHandler);
         }
 
-        /*==============================================================*/
-        /* Canvas Mode  */
-        /*==============================================================*/
-        private var _mode:String;
 
-        public function get mode():String {
-            return _mode;
+        private function get selectedShapes():Array {
+            var result:Array = [];
+
+            for each (var shape:SkinnableShape in dataProvider) {
+                if (shape.selected) {
+                    result.push(shape);
+                }
+            }
+
+            return result;
         }
 
-        public function set mode(value:String):void {
-            _mode = value;
+
+        override protected function focusOutHandler(event:FocusEvent):void {
+            super.focusOutHandler(event);
+
+            deselectAllShapes();
         }
+
+        override protected function keyUpHandler(event:KeyboardEvent):void {
+            super.keyUpHandler(event);
+
+            if (event.keyCode == 46 && mode == ShapesCanvasModes.DELETE) {
+                dataProvider.disableAutoUpdate();
+
+                for each (var selectedObject:Object in selectedShapes) {
+                    var selectedObjectIndex:int = dataProvider.getItemIndex(selectedObject);
+                    dataProvider.removeItemAt(selectedObjectIndex);
+                }
+
+                dataProvider.enableAutoUpdate();
+            }
+        }
+
 
         /*==============================================================*/
         /* Mouse Events */
         /*==============================================================*/
+        private var canvasMouseDownX:Number;
+        private var canvasMouseDownY:Number;
+        private var selectedShapeMouseDownX:Number;
+        private var selectedShapeMouseDownY:Number;
+
         private function mouseDownHandler(event:MouseEvent):void {
+            canvasMouseDownX = event.localX;
+            canvasMouseDownY = event.localY;
+
+            if (selectedShapes && selectedShapes.length > 0) {
+                var stageMousePoint:Point = new Point(event.stageX, event.stageY);
+                var shapeLocalPoint:Point = SkinnableShape(selectedShapes[0]).globalToLocal(stageMousePoint);
+                selectedShapeMouseDownX = shapeLocalPoint.x;
+                selectedShapeMouseDownY = shapeLocalPoint.y;
+            }
+
             stage.addEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.addEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
         }
 
-        protected function stageMouseMoveHandler(event:MouseEvent):void {
-            if (mode == ShapesCanvasModes.CREATE_AND_EDIT) {
+        private var inCreationOfNewShape:Boolean;
 
+        protected function stageMouseMoveHandler(event:MouseEvent):void {
+            switch (mode) {
+                case ShapesCanvasModes.CREATE_AND_EDIT:
+                    inCreationOfNewShape = true;
+                    break;
+                case ShapesCanvasModes.RESIZE_AND_MOVE:
+                    moveSelectedShapesWithMouse(event);
+                    break;
+                default:
+                    return;
+            }
+        }
+
+        private function shapeSelectionChangeHandler(event:SkinnableShapeEvent):void {
+            event.stopPropagation();
+
+            var targetShape:SkinnableShape = event.target as SkinnableShape;
+
+            //deselect other shapes if current is selected
+            if(targetShape.selected) {
+                for each (var shape:SkinnableShape in selectedShapes) {
+                    if (shape != targetShape) {
+                        shape.selected = false;
+                    }
+                }
+            }
+        }
+
+        private function deselectAllShapes():void {
+            for each (var shape:SkinnableShape in selectedShapes) {
+                shape.selected = false;
             }
         }
 
         protected function stageMouseUpHandler(event:MouseEvent):void {
-            createTextShape();
+            if (inCreationOfNewShape) {
+                var stageMousePoint:Point = new Point(event.stageX, event.stageY);
+
+                var localCanvasPoint:Point = globalToLocal(stageMousePoint);
+                var localCanvasX:Number = localCanvasPoint.x;
+                var localCanvasY:Number = localCanvasPoint.y;
+
+                var shapeWidth:Number = localCanvasX/*event.localX*/ - canvasMouseDownX;
+                var shapeHeight:Number = localCanvasY/*event.localY*/ - canvasMouseDownY;
+
+                createShape(ShapeTypes.TEXT_SHAPE, canvasMouseDownX, canvasMouseDownY, shapeWidth, shapeHeight);
+
+                inCreationOfNewShape = false;
+            }
 
             stage.removeEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.removeEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
         }
 
-        private function createTextShape():void {
-			var newShape:TexteSkinnableShape = new TexteSkinnableShape();
-			addSkinnableShape(newShape);
-        }
+        /*==============================================================*/
 
-        protected function dragEnterHandler(event:DragEvent):void {
-            if (event.dragInitiator is SkinnableShape && event.currentTarget as ShapesCanvas) {
-                DragManager.acceptDragDrop(event.currentTarget as ShapesCanvas);
+        private function moveSelectedShapesWithMouse(event:MouseEvent):void {
+            var stageMousePoint:Point = new Point(event.stageX, event.stageY);
+
+            var localCanvasPoint:Point = globalToLocal(stageMousePoint);
+            var localCanvasX:Number = localCanvasPoint.x;
+            var localCanvasY:Number = localCanvasPoint.y;
+
+            for each (var shape:SkinnableShape in selectedShapes) {
+                shape.x = localCanvasX - selectedShapeMouseDownX;
+                shape.y = localCanvasY - selectedShapeMouseDownY;
             }
         }
 
-        protected function dragDropHandler(event:DragEvent):void {
-            if (event.dragInitiator.parent == contentGroup) {
-                handleExistingShapeMove(event);
+        private function createShape(shapeType:String, shapeX:Number, shapeY:Number, shapeWidth:Number, shapeHeight:Number):void {
+            var newShape:SkinnableShape = shapeFactory.createSkinnableShape(shapeType);
+
+            newShape.x = shapeX;
+            newShape.y = shapeY;
+            newShape.width = shapeWidth;
+            newShape.height = shapeHeight;
+
+            newShape.selected = true;
+
+            dataProvider.addItem(newShape);
+        }
+
+        protected function addShapes(shapes:ArrayCollection):void {
+            for each (var object:Object in shapes) {
+                addElement(object as IVisualElement);
             }
-            else {
-                handleNewShapeInserted(event);
+        }
+
+        override protected function commitProperties():void {
+            if (dataProviderChanged) {
+
+                removeAllElements();
+
+                addShapes(dataProvider);
+                addDataProviderListener();
+                dataProviderChanged = false;
             }
-        }
 
-        protected function handleExistingShapeMove(event:DragEvent):void {
-            moveShapeAfterDropHandler(event.dragInitiator, event);
-        }
-
-        protected function handleNewShapeInserted(event:DragEvent):void {
-//			var newShapeClass:Class = Object(event.dragInitiator).constructor;
-//			var newShape:GenericShape = new newShapeClass();
-//			addDroppedShape(newShape);
-//			moveShapeAfterDropHandler(newShape, event);
-        }
-
-        protected function addSkinnableShape(shape:IVisualElement):void {
-            addElement(shape);
-        }
-
-        protected function moveShapeAfterDropHandler(shape:IUIComponent, event:DragEvent):void {
-            var localX:Number = Number(event.dragSource.dataForFormat("localX"));
-            var localY:Number = Number(event.dragSource.dataForFormat("localY"));
-            shape.x = ShapesCanvas(event.currentTarget).mouseX - localX;
-            shape.y = ShapesCanvas(event.currentTarget).mouseY - localY;
+            super.commitProperties();
         }
 
         /*==============================================================*/
         /* Dataprovider */
         /*==============================================================*/
 
-        private var _dataProvider:IList;
+        private var _dataProvider:ArrayCollection;
         private var dataProviderChanged:Boolean;
 
         [Bindable("dataProviderChanged")]
@@ -119,29 +207,32 @@ package com.sizov.basicEditor.components {
         /**
          *  The data provider for this Shapes.
          */
-        public function get dataProvider():IList {
+        public function get dataProvider():ArrayCollection {
             return _dataProvider;
         }
 
-        public function set dataProvider(value:IList):void {
-            if (_dataProvider == value)
-                return;
+        public function set dataProvider(value:ArrayCollection):void {
+            if (_dataProvider == value) return;
 
+            // listener will be added by commitProperties()
             removeDataProviderListener();
-            _dataProvider = value; // listener will be added by commitProperties()
+
+            _dataProvider = value;
             dataProviderChanged = true;
             invalidateProperties();
             dispatchEvent(new Event("dataProviderChanged"));
         }
 
         private function addDataProviderListener():void {
-            if (_dataProvider)
+            if (_dataProvider) {
                 _dataProvider.addEventListener(CollectionEvent.COLLECTION_CHANGE, dataProvider_collectionChangeHandler, false, 0, true);
+            }
         }
 
         private function removeDataProviderListener():void {
-            if (_dataProvider)
+            if (_dataProvider) {
                 _dataProvider.removeEventListener(CollectionEvent.COLLECTION_CHANGE, dataProvider_collectionChangeHandler);
+            }
         }
 
         /**
@@ -151,80 +242,51 @@ package com.sizov.basicEditor.components {
         protected function dataProvider_collectionChangeHandler(event:CollectionEvent):void {
             switch (event.kind) {
                 case CollectionEventKind.ADD:
-                {
-                    adjustAfterAdd(event.items, event.location);
+                    adjustAfterAdd(event.items);
                     break;
-                }
-
                 case CollectionEventKind.REPLACE:
-                {
-                    adjustAfterReplace(event.items, event.location);
+                    adjustAfterReplace(event.items);
                     break;
-                }
-
                 case CollectionEventKind.REMOVE:
-                {
-                    adjustAfterRemove(event.items, event.location);
+                    adjustAfterRemove(event.items);
                     break;
-                }
-
                 case CollectionEventKind.MOVE:
-                {
                     adjustAfterMove(event.items[0], event.location, event.oldLocation);
                     break;
-                }
-
                 case CollectionEventKind.REFRESH:
-                {
                     removeDataProviderListener();
                     dataProviderChanged = true;
                     invalidateProperties();
                     break;
-                }
-
                 case CollectionEventKind.RESET:
-                {
                     removeDataProviderListener();
                     dataProviderChanged = true;
                     invalidateProperties();
                     break;
-                }
-
                 case CollectionEventKind.UPDATE:
-                {
                     break;
+            }
+        }
+
+        protected function adjustAfterAdd(items:Array):void {
+            for each (var object:Object in items) {
+                addElement(object as IVisualElement);
+            }
+
+            //deselect other shapes if one is selected (applicable to last added)
+            if(SkinnableShape(object).selected) {
+                for each (var shape:SkinnableShape in selectedShapes) {
+                    if (shape != SkinnableShape(object)) {
+                        shape.selected = false;
+                    }
                 }
             }
         }
 
-        override protected function commitProperties():void {
-            if (dataProviderChanged) {
-                createShapesFromDataProvider();
-                addDataProviderListener();
-                dataProviderChanged = false;
+        protected function adjustAfterRemove(items:Array):void {
+            for each (var object:Object in items) {
+                removeElement(object as IVisualElement);
             }
-
-            super.commitProperties();
-        }
-
-        protected function adjustAfterAdd(items:Array, location:int):void {
-            var length:int = items.length;
-            for (var i:int = 0; i < length; i++) {
-                itemAdded(items[i], location + i);
-            }
-        }
-
-        protected function adjustAfterRemove(items:Array, location:int):void {
-            /*
-             var length:int=items.length;
-             for (var i:int=length - 1; i >= 0; i--) {
-             itemRemoved(items[i], location + i);
-             }
-
-             // the order might have changed, so we might need to redraw the other
-             // renderers that are order-dependent (for instance alternatingItemColor)
-             resetRenderersIndices();
-             */
         }
 
         protected function adjustAfterMove(item:Object, location:int, oldLocation:int):void {
@@ -235,7 +297,7 @@ package com.sizov.basicEditor.components {
              */
         }
 
-        protected function adjustAfterReplace(propertyChangeEvents:Array, location:int):void {
+        protected function adjustAfterReplace(propertyChangeEvents:Array):void {
             /*
              var length:int=propertyChangeEvents.length;
              for (var i:int=length - 1; i >= 0; i--) {
@@ -246,28 +308,6 @@ package com.sizov.basicEditor.components {
              itemAdded(propertyChangeEvents[i].newValue, location);
              }
              */
-        }
-
-        protected function itemAdded(item:Object, index:int):void {
-            if (item is IVisualElement) {
-                addElementAt(IVisualElement(item), index);
-            }
-        }
-
-        protected function createShapesFromDataProvider():void {
-            clearCanvas();
-
-            if (!dataProvider || dataProvider.length == 0) {
-                return;
-            }
-
-            for (var index:int = 0; index < dataProvider.length - 1; index++) {
-                itemAdded(dataProvider.getItemAt(index), index);
-            }
-        }
-
-        protected function clearCanvas():void {
-            removeAllElements();
         }
     }
 }

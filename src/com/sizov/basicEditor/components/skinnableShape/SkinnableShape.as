@@ -1,11 +1,9 @@
 package com.sizov.basicEditor.components.skinnableShape {
 
+    import com.sizov.basicEditor.events.SkinnableShapeEvent;
+
     import flash.events.MouseEvent;
     import flash.geom.Point;
-
-    import mx.core.DragSource;
-    import mx.core.IUIComponent;
-    import mx.managers.DragManager;
 
     import spark.components.supportClasses.SkinnableComponent;
     import spark.primitives.Graphic;
@@ -21,19 +19,33 @@ package com.sizov.basicEditor.components.skinnableShape {
         public function SkinnableShape() {
             super();
 
-            addEventListener(MouseEvent.MOUSE_DOWN, shapeMouseDownHandler);
             addEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
         }
 
+        private var _toBeMoved:Boolean;
+        /**
+         * Flags that shows if shape should be moved during mouse move in Canvas.
+         */
+        public function get toBeMoved():Boolean {
+            return _toBeMoved;
+        }
+
+        private var _toBeResized:Boolean;
+        /**
+         * Flags that shows if shape should be resized during mouse move in Canvas.
+         */
+        public function get toBeResized():Boolean {
+            return _toBeResized;
+        }
+
         override protected function getCurrentSkinState():String {
-            if (isSelected) {
+            if (selected) {
                 return "selected";
             }
             else {
                 return "up";
             }
         }
-
 
         override protected function partAdded(partName:String, instance:Object):void {
             super.partAdded(partName, instance);
@@ -61,58 +73,40 @@ package com.sizov.basicEditor.components.skinnableShape {
 //        }
 
 
-        /* ==============================================================  */
-        /* ========================== MOVE ==============================  */
-        /* ==============================================================  */
-
-        protected function shapeMouseDownHandler(event:MouseEvent):void {
-            doDrag(event);
-        }
-
-        protected function doDrag(event:MouseEvent):void {
-            var dragSource:DragSource = new DragSource();
-            dragSource.addData(event.localX, "localX");
-            dragSource.addData(event.localY, "localY");
-            DragManager.doDrag(event.currentTarget as IUIComponent, dragSource, event);
-        }
-
-        /* ==============================================================  */
-        /* ========================== SELECTION =========================  */
-        /* ==============================================================  */
+        /*==============================================================*/
+        /*Selection*/
+        /*==============================================================*/
 
         /**Shows if shape can be selected on canvas*/
         public var canBeSelected:Boolean = true;
 
-        private var _isSelected:Boolean;
-        private var isSelectedChanged:Boolean;
+        private var _selected:Boolean;
 
         /**
          * Shows if shape is selected on the canvas
          */
-        public function get isSelected():Boolean {
-            return _isSelected;
+        public function get selected():Boolean {
+            return _selected;
         }
 
-        public function set isSelected(value:Boolean):void {
-            if (isSelected == value) {
-                return;
-            }
+        public function set selected(value:Boolean):void {
+            if (!canBeSelected || selected == value) return;
 
-            isSelectedChanged = true;
-            _isSelected = value;
-            invalidateDisplayList();
+            _selected = value;
+
+            invalidateSkinState();
         }
 
         protected function shapeMouseClickHandler(event:MouseEvent):void {
             if (canBeSelected) {
-                isSelected = !isSelected;
-                invalidateSkinState();
+                selected = !selected;
+                dispatchEvent(new SkinnableShapeEvent(SkinnableShapeEvent.SELECTION_CHANGE, true));
             }
         }
 
-        /* ==============================================================  */
-        /* ========================== HANDLES ===========================  */
-        /* ==============================================================  */
+        /*==============================================================*/
+        /*Handlers*/
+        /*==============================================================*/
 
         protected function bottomRightHandlerMouseDownHandler(event:MouseEvent):void {
             //stop propagation of this event to parent shape
@@ -121,7 +115,7 @@ package com.sizov.basicEditor.components.skinnableShape {
             stage.addEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.addEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
 
-//            removeEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
+            removeEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
         }
 
         protected function stageMouseMoveHandler(event:MouseEvent):void {
@@ -129,15 +123,15 @@ package com.sizov.basicEditor.components.skinnableShape {
         }
 
         protected function stageMouseUpHandler(event:MouseEvent):void {
-//            addEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
+            addEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
 
             stage.removeEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.removeEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
         }
 
-        /* ==============================================================  */
-        /* ==================== RESIZE EVENTS ===========================  */
-        /* ==============================================================  */
+        /*==============================================================*/
+        /*Resize*/
+        /*==============================================================*/
 
         protected function resizeBottomRightHandler(event:MouseEvent):void {
             var stageMousePoint:Point = new Point(event.stageX, event.stageY);
@@ -149,6 +143,5 @@ package com.sizov.basicEditor.components.skinnableShape {
             width = newWidth >= MIN_SHAPE_WIDTH ? newWidth : MIN_SHAPE_WIDTH;
             height = newHeight >= MIN_SHAPE_HEIGHT ? newHeight : MIN_SHAPE_WIDTH;
         }
-
     }
 }
