@@ -21,7 +21,12 @@ package com.sizov.basicEditor.components {
 
     public class ShapesCanvas extends SkinnableContainer implements IFocusManagerComponent {
 
+        private static const MIN_SHAPE_WIDTH:Number = 10;
+        private static const MIN_SHAPE_HEIGHT:Number = 10;
+
         public var shapeFactory:IShapeFactory;
+
+        //TODO: use state pattern and call mouse events on state
         public var mode:String;
 
         public function ShapesCanvas() {
@@ -29,28 +34,29 @@ package com.sizov.basicEditor.components {
 
             setStyle("skinClass", ShapesCanvasSkin);
 
-            addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
+            addEventListener(SkinnableShapeEvent.MOUSE_DOWN, shapeMouseDownHandler);
             addEventListener(SkinnableShapeEvent.SELECTION_CHANGE, shapeSelectionChangeHandler);
+
+            addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
         }
 
-
-        private function get selectedShapes():Array {
-            var result:Array = [];
-
+        private function get selectedShape():SkinnableShape {
             for each (var shape:SkinnableShape in dataProvider) {
                 if (shape.selected) {
-                    result.push(shape);
+                    return shape;
                 }
             }
-
-            return result;
+            return null;
         }
 
 
         override protected function focusOutHandler(event:FocusEvent):void {
             super.focusOutHandler(event);
 
-            deselectAllShapes();
+            //deselect all shapes
+            for each (var shape:SkinnableShape in dataProvider) {
+                shape.selected = false;
+            }
         }
 
         override protected function keyUpHandler(event:KeyboardEvent):void {
@@ -59,8 +65,9 @@ package com.sizov.basicEditor.components {
             if (event.keyCode == 46 && mode == ShapesCanvasModes.DELETE) {
                 dataProvider.disableAutoUpdate();
 
-                for each (var selectedObject:Object in selectedShapes) {
-                    var selectedObjectIndex:int = dataProvider.getItemIndex(selectedObject);
+                var selectedShape:SkinnableShape = selectedShape;
+                if (selectedShape) {
+                    var selectedObjectIndex:int = dataProvider.getItemIndex(selectedShape);
                     dataProvider.removeItemAt(selectedObjectIndex);
                 }
 
@@ -72,49 +79,120 @@ package com.sizov.basicEditor.components {
         /*==============================================================*/
         /* Mouse Events */
         /*==============================================================*/
-        private var canvasMouseDownX:Number;
-        private var canvasMouseDownY:Number;
-        private var selectedShapeMouseDownX:Number;
-        private var selectedShapeMouseDownY:Number;
+        private var canvasDownX:Number;
+        private var canvasDownY:Number;
+
+        private var mouseInteractionShape:SkinnableShape;
+        private var mouseInteractionShapeDownX:Number;
+        private var mouseInteractionShapeDownY:Number;
 
         private function mouseDownHandler(event:MouseEvent):void {
-            canvasMouseDownX = event.localX;
-            canvasMouseDownY = event.localY;
+            var localCanvasPoint:Point = globalToLocal(new Point(event.stageX, event.stageY));
 
-            if (selectedShapes && selectedShapes.length > 0) {
-                var stageMousePoint:Point = new Point(event.stageX, event.stageY);
-                var shapeLocalPoint:Point = SkinnableShape(selectedShapes[0]).globalToLocal(stageMousePoint);
-                selectedShapeMouseDownX = shapeLocalPoint.x;
-                selectedShapeMouseDownY = shapeLocalPoint.y;
+            canvasDownX = localCanvasPoint.x;
+            canvasDownY = localCanvasPoint.y;
+
+            if (mode == ShapesCanvasModes.CREATE_OR_EDIT) {
+
+                //if not interacting with shape - let's create one
+                if (!mouseInteractionShape) {
+                    mouseInteractionShape = shapeFactory.createSkinnableShape(ShapeTypes.TEXT_SHAPE);
+                    mouseInteractionShape.selected = true;
+                    mouseInteractionShape.x = canvasDownX;
+                    mouseInteractionShape.y = canvasDownY;
+
+                    dataProvider.addItem(mouseInteractionShape);
+                }
+
+                //user mouse is over existing shape, he can only edit it - no need to control mouse move
+                else {
+                    mouseInteractionShape = null;
+                    return;
+                }
             }
+
+            //if in resize/move mode and user is not interacting with any shape - no need to control mouse move
+            else if (mode == ShapesCanvasModes.RESIZE_OR_MOVE && !mouseInteractionShape) {
+                return;
+            }
+
+            //if in delete mode - no need to control mouse move
+            else if (mode == ShapesCanvasModes.DELETE) {
+                return;
+            }
+
+            var shapeLocalPoint:Point = mouseInteractionShape.globalToLocal(new Point(event.stageX, event.stageY));
+            mouseInteractionShapeDownX = shapeLocalPoint.x;
+            mouseInteractionShapeDownY = shapeLocalPoint.y;
 
             stage.addEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.addEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
         }
 
-        private var inCreationOfNewShape:Boolean;
-
         protected function stageMouseMoveHandler(event:MouseEvent):void {
             switch (mode) {
-                case ShapesCanvasModes.CREATE_AND_EDIT:
-                    inCreationOfNewShape = true;
+                case ShapesCanvasModes.CREATE_OR_EDIT:
+                    resizeInteractionShape(event);
                     break;
-                case ShapesCanvasModes.RESIZE_AND_MOVE:
-                    moveSelectedShapesWithMouse(event);
+                case ShapesCanvasModes.RESIZE_OR_MOVE:
+                    if (mouseInteractionShape.resizeRequested) {
+                        resizeInteractionShape(event);
+                    }
+                    else {
+                        moveInteractionShape(event);
+                    }
+
                     break;
                 default:
                     return;
             }
         }
 
+        protected function stageMouseUpHandler(event:MouseEvent):void {
+            mouseInteractionShape = null;
+            mouseInteractionShapeDownX = NaN;
+            mouseInteractionShapeDownY = NaN;
+
+            stage.removeEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
+            stage.removeEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
+        }
+
+        private function moveInteractionShape(event:MouseEvent):void {
+            var localCanvasPoint:Point = globalToLocal(new Point(event.stageX, event.stageY));
+
+            mouseInteractionShape.x = localCanvasPoint.x - mouseInteractionShapeDownX;
+            mouseInteractionShape.y = localCanvasPoint.y - mouseInteractionShapeDownY;
+        }
+
+        private function resizeInteractionShape(event:MouseEvent):void {
+            var localCanvasPoint:Point = globalToLocal(new Point(event.stageX, event.stageY));
+
+            var shapeWidth:Number = localCanvasPoint.x - mouseInteractionShape.x;
+            var shapeHeight:Number = localCanvasPoint.y - mouseInteractionShape.y;
+
+            if (shapeWidth < MIN_SHAPE_WIDTH) {
+                shapeWidth = MIN_SHAPE_WIDTH;
+            }
+
+            if (shapeHeight < MIN_SHAPE_HEIGHT) {
+                shapeHeight = MIN_SHAPE_HEIGHT;
+            }
+
+            mouseInteractionShape.width = shapeWidth;
+            mouseInteractionShape.height = shapeHeight;
+        }
+
+        /*==============================================================*/
+        /* Shape Events */
+        /*==============================================================*/
         private function shapeSelectionChangeHandler(event:SkinnableShapeEvent):void {
             event.stopPropagation();
 
             var targetShape:SkinnableShape = event.target as SkinnableShape;
 
-            //deselect other shapes if current is selected
-            if(targetShape.selected) {
-                for each (var shape:SkinnableShape in selectedShapes) {
+            //deselect other shapes
+            if (targetShape.selected) {
+                for each (var shape:SkinnableShape in dataProvider) {
                     if (shape != targetShape) {
                         shape.selected = false;
                     }
@@ -122,72 +200,21 @@ package com.sizov.basicEditor.components {
             }
         }
 
-        private function deselectAllShapes():void {
-            for each (var shape:SkinnableShape in selectedShapes) {
-                shape.selected = false;
-            }
-        }
-
-        protected function stageMouseUpHandler(event:MouseEvent):void {
-            if (inCreationOfNewShape) {
-                var stageMousePoint:Point = new Point(event.stageX, event.stageY);
-
-                var localCanvasPoint:Point = globalToLocal(stageMousePoint);
-                var localCanvasX:Number = localCanvasPoint.x;
-                var localCanvasY:Number = localCanvasPoint.y;
-
-                var shapeWidth:Number = localCanvasX/*event.localX*/ - canvasMouseDownX;
-                var shapeHeight:Number = localCanvasY/*event.localY*/ - canvasMouseDownY;
-
-                createShape(ShapeTypes.TEXT_SHAPE, canvasMouseDownX, canvasMouseDownY, shapeWidth, shapeHeight);
-
-                inCreationOfNewShape = false;
-            }
-
-            stage.removeEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
-            stage.removeEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
+        private function shapeMouseDownHandler(event:SkinnableShapeEvent):void {
+            mouseInteractionShape = event.target as SkinnableShape;
         }
 
         /*==============================================================*/
-
-        private function moveSelectedShapesWithMouse(event:MouseEvent):void {
-            var stageMousePoint:Point = new Point(event.stageX, event.stageY);
-
-            var localCanvasPoint:Point = globalToLocal(stageMousePoint);
-            var localCanvasX:Number = localCanvasPoint.x;
-            var localCanvasY:Number = localCanvasPoint.y;
-
-            for each (var shape:SkinnableShape in selectedShapes) {
-                shape.x = localCanvasX - selectedShapeMouseDownX;
-                shape.y = localCanvasY - selectedShapeMouseDownY;
-            }
-        }
-
-        private function createShape(shapeType:String, shapeX:Number, shapeY:Number, shapeWidth:Number, shapeHeight:Number):void {
-            var newShape:SkinnableShape = shapeFactory.createSkinnableShape(shapeType);
-
-            newShape.x = shapeX;
-            newShape.y = shapeY;
-            newShape.width = shapeWidth;
-            newShape.height = shapeHeight;
-
-            newShape.selected = true;
-
-            dataProvider.addItem(newShape);
-        }
-
-        protected function addShapes(shapes:ArrayCollection):void {
-            for each (var object:Object in shapes) {
-                addElement(object as IVisualElement);
-            }
-        }
 
         override protected function commitProperties():void {
             if (dataProviderChanged) {
 
                 removeAllElements();
 
-                addShapes(dataProvider);
+                for each (var object:Object in dataProvider) {
+                    addElement(object as IVisualElement);
+                }
+
                 addDataProviderListener();
                 dataProviderChanged = false;
             }
@@ -244,26 +271,13 @@ package com.sizov.basicEditor.components {
                 case CollectionEventKind.ADD:
                     adjustAfterAdd(event.items);
                     break;
-                case CollectionEventKind.REPLACE:
-                    adjustAfterReplace(event.items);
-                    break;
                 case CollectionEventKind.REMOVE:
                     adjustAfterRemove(event.items);
-                    break;
-                case CollectionEventKind.MOVE:
-                    adjustAfterMove(event.items[0], event.location, event.oldLocation);
-                    break;
-                case CollectionEventKind.REFRESH:
-                    removeDataProviderListener();
-                    dataProviderChanged = true;
-                    invalidateProperties();
                     break;
                 case CollectionEventKind.RESET:
                     removeDataProviderListener();
                     dataProviderChanged = true;
                     invalidateProperties();
-                    break;
-                case CollectionEventKind.UPDATE:
                     break;
             }
         }
@@ -274,8 +288,8 @@ package com.sizov.basicEditor.components {
             }
 
             //deselect other shapes if one is selected (applicable to last added)
-            if(SkinnableShape(object).selected) {
-                for each (var shape:SkinnableShape in selectedShapes) {
+            if (SkinnableShape(object).selected) {
+                for each (var shape:SkinnableShape in dataProvider) {
                     if (shape != SkinnableShape(object)) {
                         shape.selected = false;
                     }
@@ -287,27 +301,6 @@ package com.sizov.basicEditor.components {
             for each (var object:Object in items) {
                 removeElement(object as IVisualElement);
             }
-        }
-
-        protected function adjustAfterMove(item:Object, location:int, oldLocation:int):void {
-            /*
-             itemRemoved(item, oldLocation);
-             itemAdded(item, location);
-             resetRenderersIndices();
-             */
-        }
-
-        protected function adjustAfterReplace(propertyChangeEvents:Array):void {
-            /*
-             var length:int=propertyChangeEvents.length;
-             for (var i:int=length - 1; i >= 0; i--) {
-             itemRemoved(propertyChangeEvents[i].oldValue, location + i);
-             }
-
-             for (i=length - 1; i >= 0; i--) {
-             itemAdded(propertyChangeEvents[i].newValue, location);
-             }
-             */
         }
     }
 }

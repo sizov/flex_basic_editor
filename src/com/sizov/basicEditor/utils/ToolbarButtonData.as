@@ -5,7 +5,7 @@ package com.sizov.basicEditor.utils {
     public class ToolbarButtonData {
 
         public static const CREATE_AND_EDIT_BUTTON_DATA:Object = {label: "Text"};
-        public static const RESIZE_AND_MOVE_BUTTON_DATA:Object = {label: "Move"};
+        public static const RESIZE_AND_MOVE_BUTTON_DATA:Object = {label: "Move/Resize"};
         public static const DELETE_BUTTON_DATA:Object = {label: "Delete"};
 
         public static const DEFAULT_BUTTON_SET:ArrayList = new ArrayList([
@@ -33,10 +33,10 @@ package com.sizov.basicEditor.utils {
         public static function getCanvasModeByButtonData(buttonBarData:Object):String {
             switch (buttonBarData) {
                 case ToolbarButtonData.CREATE_AND_EDIT_BUTTON_DATA:
-                    return ShapesCanvasModes.CREATE_AND_EDIT;
+                    return ShapesCanvasModes.CREATE_OR_EDIT;
                     break;
                 case ToolbarButtonData.RESIZE_AND_MOVE_BUTTON_DATA:
-                    return ShapesCanvasModes.RESIZE_AND_MOVE;
+                    return ShapesCanvasModes.RESIZE_OR_MOVE;
                     break;
                 case ToolbarButtonData.DELETE_BUTTON_DATA:
                     return ShapesCanvasModes.DELETE;

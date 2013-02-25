@@ -18,27 +18,45 @@
         <s:State name="selected"/>
     </s:states>
 
-    <!-- border and fill -->
     <s:Rect
         id="rect"
         top="0"
         right="0"
         bottom="0"
-        left="0">
+        left="0"
+        includeIn="selected">
         <s:fill>
-            <s:SolidColor color="0x999999"/>
+            <s:SolidColor color="0xffffff" alpha="0.5"/>
         </s:fill>
+        <s:stroke>
+            <s:SolidColorStroke color="0xa0a0a0"/>
+        </s:stroke>
     </s:Rect>
 
+    <!--TODO: Move to text properties to CSS-->
+
     <s:Label
+        width="100%"
+        textAlign="center"
         text="{hostComponent.text}"
-        includeIn="up"/>
+        includeIn="up"
+        horizontalCenter="0"
+        verticalCenter="0"
+        fontWeight="bold"
+        fontSize="20"
+        color="0x0088aa"/>
 
     <s:TextInput
         id="textInput"
         text="{hostComponent.text}"
-        change="hostComponent.text = textInput.text"
-        includeIn="selected"/>
+        includeIn="selected"
+        textAlign="center"
+        horizontalCenter="0"
+        verticalCenter="0"
+        fontWeight="bold"
+        fontStyle="italic"
+        fontSize="20"
+        color="0x888888"/>
 
     <assets:Handler
         id="bottomRightHandler"

@@ -37,7 +37,7 @@
         dataProvider="{ToolbarButtonData.DEFAULT_BUTTON_SET}"
         change="model.changeCanvasMode(ToolbarButtonData.getCanvasModeByButtonData(toolBarButtonDataBar.selectedItem))">
         <s:layout>
-            <s:VerticalLayout/>
+            <s:VerticalLayout horizontalAlign="center"/>
         </s:layout>
     </s:ButtonBar>
 

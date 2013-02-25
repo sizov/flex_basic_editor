@@ -3,15 +3,11 @@ package com.sizov.basicEditor.components.skinnableShape {
     import com.sizov.basicEditor.events.SkinnableShapeEvent;
 
     import flash.events.MouseEvent;
-    import flash.geom.Point;
 
     import spark.components.supportClasses.SkinnableComponent;
     import spark.primitives.Graphic;
 
     public class SkinnableShape extends SkinnableComponent {
-
-        private static const MIN_SHAPE_WIDTH:Number = 10;
-        private static const MIN_SHAPE_HEIGHT:Number = 10;
 
         [SkinPart(required="true")]
         public var bottomRightHandler:Graphic;
@@ -20,22 +16,7 @@ package com.sizov.basicEditor.components.skinnableShape {
             super();
 
             addEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
-        }
-
-        private var _toBeMoved:Boolean;
-        /**
-         * Flags that shows if shape should be moved during mouse move in Canvas.
-         */
-        public function get toBeMoved():Boolean {
-            return _toBeMoved;
-        }
-
-        private var _toBeResized:Boolean;
-        /**
-         * Flags that shows if shape should be resized during mouse move in Canvas.
-         */
-        public function get toBeResized():Boolean {
-            return _toBeResized;
+            addEventListener(MouseEvent.MOUSE_DOWN, shapeMouseDownHandler);
         }
 
         override protected function getCurrentSkinState():String {
@@ -47,21 +28,10 @@ package com.sizov.basicEditor.components.skinnableShape {
             }
         }
 
-        override protected function partAdded(partName:String, instance:Object):void {
-            super.partAdded(partName, instance);
+        private var _resizeRequested:Boolean;
 
-            if (instance == bottomRightHandler) {
-                bottomRightHandler.addEventListener(MouseEvent.MOUSE_DOWN, bottomRightHandlerMouseDownHandler);
-            }
-        }
-
-
-        override protected function partRemoved(partName:String, instance:Object):void {
-            super.partRemoved(partName, instance);
-
-            if (instance == bottomRightHandler) {
-                bottomRightHandler.removeEventListener(MouseEvent.MOUSE_DOWN, bottomRightHandlerMouseDownHandler);
-            }
+        public function get resizeRequested():Boolean {
+            return _resizeRequested;
         }
 
 //        override protected function measure():void
@@ -71,7 +41,6 @@ package com.sizov.basicEditor.components.skinnableShape {
 //            measuredWidth = GenericShape.DEFAULT_MEASURED_WIDTH;
 //            measuredHeight = GenericShape.DEFAULT_MEASURED_HEIGHT;
 //        }
-
 
         /*==============================================================*/
         /*Selection*/
@@ -97,51 +66,20 @@ package com.sizov.basicEditor.components.skinnableShape {
             invalidateSkinState();
         }
 
+        protected function shapeMouseDownHandler(event:MouseEvent):void {
+            trace("shapeMouseDownHandler");
+            //if clicked on resize handler, mark it as one to be resized
+            _resizeRequested = event.target == bottomRightHandler;
+
+            dispatchEvent(new SkinnableShapeEvent(SkinnableShapeEvent.MOUSE_DOWN, true));
+        }
+
         protected function shapeMouseClickHandler(event:MouseEvent):void {
+            trace("shapeMouseClickHandler");
             if (canBeSelected) {
                 selected = !selected;
                 dispatchEvent(new SkinnableShapeEvent(SkinnableShapeEvent.SELECTION_CHANGE, true));
             }
-        }
-
-        /*==============================================================*/
-        /*Handlers*/
-        /*==============================================================*/
-
-        protected function bottomRightHandlerMouseDownHandler(event:MouseEvent):void {
-            //stop propagation of this event to parent shape
-            event.stopImmediatePropagation();
-
-            stage.addEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
-            stage.addEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
-
-            removeEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
-        }
-
-        protected function stageMouseMoveHandler(event:MouseEvent):void {
-            resizeBottomRightHandler(event);
-        }
-
-        protected function stageMouseUpHandler(event:MouseEvent):void {
-            addEventListener(MouseEvent.CLICK, shapeMouseClickHandler);
-
-            stage.removeEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
-            stage.removeEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
-        }
-
-        /*==============================================================*/
-        /*Resize*/
-        /*==============================================================*/
-
-        protected function resizeBottomRightHandler(event:MouseEvent):void {
-            var stageMousePoint:Point = new Point(event.stageX, event.stageY);
-            var localShapePoint:Point = globalToLocal(stageMousePoint);
-
-            var newWidth:Number = localShapePoint.x;
-            var newHeight:Number = localShapePoint.y;
-
-            width = newWidth >= MIN_SHAPE_WIDTH ? newWidth : MIN_SHAPE_WIDTH;
-            height = newHeight >= MIN_SHAPE_HEIGHT ? newHeight : MIN_SHAPE_WIDTH;
         }
     }
 }

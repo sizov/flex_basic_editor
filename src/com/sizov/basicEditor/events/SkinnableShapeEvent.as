@@ -12,6 +12,8 @@ package com.sizov.basicEditor.events {
     public class SkinnableShapeEvent extends Event {
 
         public static const SELECTION_CHANGE:String = "selectionChange";
+        public static const MOUSE_DOWN:String = "moveRequest";
+//        public static const RESIZE_REQUEST:String = "resizeRequest";
 
         public function SkinnableShapeEvent(type:String, bubbles:Boolean = false, cancelable:Boolean = false):* {
             super(type, bubbles, cancelable);

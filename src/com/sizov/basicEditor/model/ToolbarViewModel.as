@@ -18,7 +18,7 @@ package com.sizov.basicEditor.model {
         }
 
         public function setDefaultCanvasMode():void {
-            setCanvasMode(ShapesCanvasModes.CREATE_AND_EDIT);
+            setCanvasMode(ShapesCanvasModes.CREATE_OR_EDIT);
         }
 
         private function setCanvasMode(canvasMode:String):void {
