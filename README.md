@@ -1,2 +1,2 @@
-flex_basic_editor
+Simple shapes editor written in Flex.
 =================
