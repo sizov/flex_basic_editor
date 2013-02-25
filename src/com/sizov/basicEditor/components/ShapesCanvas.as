@@ -1,6 +1,7 @@
 package com.sizov.basicEditor.components {
 
     import com.sizov.basicEditor.components.skinnableShape.SkinnableShape;
+    import com.sizov.basicEditor.components.skinnableShape.TextSkinnableShape;
     import com.sizov.basicEditor.events.SkinnableShapeEvent;
     import com.sizov.basicEditor.skins.ShapesCanvasSkin;
     import com.sizov.basicEditor.utils.ShapesCanvasModes;
@@ -53,9 +54,15 @@ package com.sizov.basicEditor.components {
         override protected function focusOutHandler(event:FocusEvent):void {
             super.focusOutHandler(event);
 
-            //deselect all shapes
-            for each (var shape:SkinnableShape in dataProvider) {
-                shape.selected = false;
+            //deselect currently selected shapes in case it's not a text frame in editing mode
+            var focusedComponent:IFocusManagerComponent = focusManager.getFocus();
+            var currentSelectedShape:SkinnableShape = selectedShape;
+
+            var textEditingInProcess:Boolean = (currentSelectedShape is TextSkinnableShape) &&
+                    TextSkinnableShape(currentSelectedShape).textInput == focusedComponent;
+
+            if (currentSelectedShape && !textEditingInProcess) {
+                currentSelectedShape.selected = false;
             }
         }
 
@@ -63,15 +70,8 @@ package com.sizov.basicEditor.components {
             super.keyUpHandler(event);
 
             if (event.keyCode == 46 && mode == ShapesCanvasModes.DELETE) {
-                dataProvider.disableAutoUpdate();
-
-                var selectedShape:SkinnableShape = selectedShape;
-                if (selectedShape) {
-                    var selectedObjectIndex:int = dataProvider.getItemIndex(selectedShape);
-                    dataProvider.removeItemAt(selectedObjectIndex);
-                }
-
-                dataProvider.enableAutoUpdate();
+                var selectedObjectIndex:int = dataProvider.getItemIndex(selectedShape);
+                dataProvider.removeItemAt(selectedObjectIndex);
             }
         }
 
@@ -86,24 +86,25 @@ package com.sizov.basicEditor.components {
         private var mouseInteractionShapeDownX:Number;
         private var mouseInteractionShapeDownY:Number;
 
+        private var pendingNewShapeCreation:Boolean;
+
         private function mouseDownHandler(event:MouseEvent):void {
             var localCanvasPoint:Point = globalToLocal(new Point(event.stageX, event.stageY));
 
             canvasDownX = localCanvasPoint.x;
             canvasDownY = localCanvasPoint.y;
 
+            //deselect other shapes
+            var currentSelectedShape:SkinnableShape = selectedShape;
+            if (currentSelectedShape && mouseInteractionShape != currentSelectedShape) {
+                currentSelectedShape.selected = false;
+            }
+
             if (mode == ShapesCanvasModes.CREATE_OR_EDIT) {
-
-                //if not interacting with shape - let's create one
+                //if not interacting with shape - let's schedule creation
                 if (!mouseInteractionShape) {
-                    mouseInteractionShape = shapeFactory.createSkinnableShape(ShapeTypes.TEXT_SHAPE);
-                    mouseInteractionShape.selected = true;
-                    mouseInteractionShape.x = canvasDownX;
-                    mouseInteractionShape.y = canvasDownY;
-
-                    dataProvider.addItem(mouseInteractionShape);
+                    pendingNewShapeCreation = true;
                 }
-
                 //user mouse is over existing shape, he can only edit it - no need to control mouse move
                 else {
                     mouseInteractionShape = null;
@@ -121,9 +122,11 @@ package com.sizov.basicEditor.components {
                 return;
             }
 
-            var shapeLocalPoint:Point = mouseInteractionShape.globalToLocal(new Point(event.stageX, event.stageY));
-            mouseInteractionShapeDownX = shapeLocalPoint.x;
-            mouseInteractionShapeDownY = shapeLocalPoint.y;
+            if (mouseInteractionShape) {
+                var shapeLocalPoint:Point = mouseInteractionShape.globalToLocal(new Point(event.stageX, event.stageY));
+                mouseInteractionShapeDownX = shapeLocalPoint.x;
+                mouseInteractionShapeDownY = shapeLocalPoint.y;
+            }
 
             stage.addEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.addEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
@@ -131,9 +134,15 @@ package com.sizov.basicEditor.components {
 
         protected function stageMouseMoveHandler(event:MouseEvent):void {
             switch (mode) {
+
                 case ShapesCanvasModes.CREATE_OR_EDIT:
+                    if (pendingNewShapeCreation) {
+                        pendingNewShapeCreation = false;
+                        handleShapeCreation(event);
+                    }
                     resizeInteractionShape(event);
                     break;
+
                 case ShapesCanvasModes.RESIZE_OR_MOVE:
                     if (mouseInteractionShape.resizeRequested) {
                         resizeInteractionShape(event);
@@ -148,16 +157,31 @@ package com.sizov.basicEditor.components {
             }
         }
 
+        private function handleShapeCreation(event:MouseEvent):void {
+            mouseInteractionShape = shapeFactory.createSkinnableShape(ShapeTypes.TEXT_SHAPE);
+            mouseInteractionShape.x = canvasDownX;
+            mouseInteractionShape.y = canvasDownY;
+
+            var shapeLocalPoint:Point = mouseInteractionShape.globalToLocal(new Point(event.stageX, event.stageY));
+            mouseInteractionShapeDownX = shapeLocalPoint.x;
+            mouseInteractionShapeDownY = shapeLocalPoint.y;
+
+            dataProvider.addItem(mouseInteractionShape);
+        }
+
         protected function stageMouseUpHandler(event:MouseEvent):void {
             mouseInteractionShape = null;
             mouseInteractionShapeDownX = NaN;
             mouseInteractionShapeDownY = NaN;
+            pendingNewShapeCreation = false;
 
             stage.removeEventListener(MouseEvent.MOUSE_MOVE, stageMouseMoveHandler);
             stage.removeEventListener(MouseEvent.MOUSE_UP, stageMouseUpHandler);
         }
 
         private function moveInteractionShape(event:MouseEvent):void {
+            if (!mouseInteractionShape) return;
+
             var localCanvasPoint:Point = globalToLocal(new Point(event.stageX, event.stageY));
 
             mouseInteractionShape.x = localCanvasPoint.x - mouseInteractionShapeDownX;
@@ -165,6 +189,8 @@ package com.sizov.basicEditor.components {
         }
 
         private function resizeInteractionShape(event:MouseEvent):void {
+            if (!mouseInteractionShape) return;
+
             var localCanvasPoint:Point = globalToLocal(new Point(event.stageX, event.stageY));
 
             var shapeWidth:Number = localCanvasPoint.x - mouseInteractionShape.x;
@@ -191,12 +217,9 @@ package com.sizov.basicEditor.components {
             var targetShape:SkinnableShape = event.target as SkinnableShape;
 
             //deselect other shapes
-            if (targetShape.selected) {
-                for each (var shape:SkinnableShape in dataProvider) {
-                    if (shape != targetShape) {
-                        shape.selected = false;
-                    }
-                }
+            var currentSelectedShape:SkinnableShape = selectedShape;
+            if (targetShape.selected && targetShape != currentSelectedShape) {
+                currentSelectedShape.selected = false;
             }
         }
 
@@ -283,17 +306,17 @@ package com.sizov.basicEditor.components {
         }
 
         protected function adjustAfterAdd(items:Array):void {
-            for each (var object:Object in items) {
-                addElement(object as IVisualElement);
+            for each (var shape:SkinnableShape in items) {
+                //item might have been added in creation phase
+                if (!contains(shape)) {
+                    addElement(shape);
+                }
             }
 
-            //deselect other shapes if one is selected (applicable to last added)
-            if (SkinnableShape(object).selected) {
-                for each (var shape:SkinnableShape in dataProvider) {
-                    if (shape != SkinnableShape(object)) {
-                        shape.selected = false;
-                    }
-                }
+            //deselect other shapes if added one is selected (applicable to last added shape)
+            var currentSelectedShape:SkinnableShape = selectedShape;
+            if (shape.selected && currentSelectedShape) {
+                currentSelectedShape.selected = false;
             }
         }
 

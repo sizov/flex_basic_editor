@@ -5,7 +5,6 @@ package com.sizov.basicEditor.components.skinnableShape {
     import flash.events.MouseEvent;
 
     import spark.components.TextInput;
-
     import spark.events.TextOperationEvent;
 
     public class TextSkinnableShape extends SkinnableShape {
@@ -49,7 +48,6 @@ package com.sizov.basicEditor.components.skinnableShape {
         }
 
         private function textInput_clickHandler(event:MouseEvent):void {
-            trace("textInput_clickHandler");
             //if text frame is selected - don't propagate click as it will deselect node
             if (selected) {
                 event.stopImmediatePropagation();
@@ -57,7 +55,6 @@ package com.sizov.basicEditor.components.skinnableShape {
         }
 
         private function textInput_mouseDownHandler(event:MouseEvent):void {
-            trace("textInput_mouseDownHandler");
             //if text frame is selected - don't propagate click as it will deselect node
             if (selected) {
                 event.stopImmediatePropagation();

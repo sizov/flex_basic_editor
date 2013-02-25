@@ -34,14 +34,6 @@ package com.sizov.basicEditor.components.skinnableShape {
             return _resizeRequested;
         }
 
-//        override protected function measure():void
-//        {
-//            measuredMinWidth = GenericShape.DEFAULT_MEASURED_MIN_WIDTH;
-//            measuredMinHeight = GenericShape.DEFAULT_MEASURED_MIN_HEIGHT;
-//            measuredWidth = GenericShape.DEFAULT_MEASURED_WIDTH;
-//            measuredHeight = GenericShape.DEFAULT_MEASURED_HEIGHT;
-//        }
-
         /*==============================================================*/
         /*Selection*/
         /*==============================================================*/
@@ -67,7 +59,6 @@ package com.sizov.basicEditor.components.skinnableShape {
         }
 
         protected function shapeMouseDownHandler(event:MouseEvent):void {
-            trace("shapeMouseDownHandler");
             //if clicked on resize handler, mark it as one to be resized
             _resizeRequested = event.target == bottomRightHandler;
 
@@ -75,7 +66,6 @@ package com.sizov.basicEditor.components.skinnableShape {
         }
 
         protected function shapeMouseClickHandler(event:MouseEvent):void {
-            trace("shapeMouseClickHandler");
             if (canBeSelected) {
                 selected = !selected;
                 dispatchEvent(new SkinnableShapeEvent(SkinnableShapeEvent.SELECTION_CHANGE, true));
